@@ -57,8 +57,10 @@ def process(count, chain, save_X, save_y):
     y = []
     for i in range(count):
         _ = chain(i)
-        y.append(_[0])
-        X.append(_[1])
+        for _X in _[1]:
+            X.append(_X)
+        for _y in _[0]:
+            y.append(int(_y))
     with open(save_X, "wb") as f:
         np.save(f, np.array(X))
     with open(save_y, "wb") as f:
