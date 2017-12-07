@@ -3,15 +3,16 @@ import pickle  # save model
 
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model.logistic import LogisticRegression
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import KFold
 
 
 class category_result:
-    '''
+    """
     class for calculating and storing result of each category
-    '''
+    """
     mean_fpr = np.linspace(0, 1, 100)
 
     def __init__(self):
@@ -25,27 +26,28 @@ class category_result:
         self.tprs.append(tpr)
         self.aucs.append(auc(fpr, tpr))
 
-    def print_result(self, label):
+    def print_result(self, label, digit):
         for fold in range(len(self.fprs)):
-            plt.plot(self.fprs[fold], self.tprs[fold], lw=1, alpha=0.3,
+            plt.plot(self.fprs[fold], self.tprs[fold], lw=1.5, alpha=0.3,
                      label='ROC fold %d AUC = %0.2f' % (fold, self.aucs[fold]))
-        plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
+        plt.plot([0, 1], [0, 1], linestyle='--', lw=1, color='r',
                  label='Random', alpha=.8)
         plt.xlim([-0.05, 1.05])
         plt.ylim([-0.05, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('ROCs of category %d Mean AUC = %0.2f $\pm$ %0.2f'
-                  % (label, np.mean(self.aucs), np.std(self.aucs)))
+        plt.title('ROCs of category %d, digit %d Mean AUC = %0.2f $\pm$ %0.2f'
+                  % (label, digit, np.mean(self.aucs), np.std(self.aucs)))
         plt.legend(loc="lower right")
-        plt.savefig('%d.png' % (label))
-        plt.show()
+        plt.savefig('./result/digit%dnumber%d.png' % (label, digit))
+        #plt.show()
+        plt.clf()
 
 
 class fold_result:
-    '''
+    """
     class for calculating and storing result of each fold
-    '''
+    """
 
     def __init__(self):
         self.train_scores = []
@@ -62,27 +64,41 @@ class fold_result:
               % (np.mean(self.test_scores), np.std(self.test_scores)))
 
 
-def train_model(X, y, out, N):
-    '''
-    :param X: ndarray data points
-    :param y: ndarray labels
-    :param print_r: whether to print rocs
-    :return:
-    '''
-    clf = LogisticRegression(solver='sag', n_jobs=N)
+def train_model(X, y, out, N, digit, classifier):
+    """
+    This function train the model and save the pickled result
+    :param X: nparray, one row is one sample
+    :param y: nparray, labels
+    :param out: output filename
+    :param N: number of CPU cores to use
+    :param digit: digit of the captcha
+    :param classifier: which classifier to use
+    :return: None
+    """
+    if (classifier == 'Logistic'):
+        clf = LogisticRegression(solver='sag', n_jobs=N)
+    else:
+        clf = RandomForestClassifier(n_estimators=200, random_state=1234567, n_jobs=N)
     clf.fit(X, y)
+    # output name
+    out = 'digit' + str(digit) + out
     with open(out, 'w') as f:
         pickle.dump(clf, f)
     print "Model saved in", out
 
 
-def validate_model(X, y, N):
-    '''
-    :param X: ndarray data points
-    :param y: ndarray labels
-    :param print_r: whether to print rocs
-    :return:
-    '''
+def validate_model(X, y, N, digit, classifier):
+    """
+    This function validate the model by K-fold cross validation and print the ROC curves
+    in the result folder
+    :param X: nparray, one row is one sample
+    :param y: nparray, labels
+    :param out: output filename
+    :param N: number of CPU cores to use
+    :param digit: digit of the captcha
+    :param classifier: which classifier to use
+    :return: None
+    """
     # K-fold cross validation
     folds = KFold(n_splits=5, shuffle=True, random_state=1234567).split(X)
     fold_r = fold_result()
@@ -95,7 +111,10 @@ def validate_model(X, y, N):
         X_test = X[test]
         y_train = y[train]
         y_test = y[test]
-        clf = LogisticRegression(solver='sag', n_jobs=N)
+        if (classifier == 'Logistic'):
+            clf = LogisticRegression(solver='sag', n_jobs=N)
+        else:
+            clf = RandomForestClassifier(n_estimators=200, random_state=1234567, n_jobs=N)
         clf.fit(X_train, y_train)
         probas = clf.predict_proba(X_test)
         fold_r.append(clf, X_train, y_train, X_test, y_test)
@@ -104,7 +123,7 @@ def validate_model(X, y, N):
     fold_r.print_score()
     # print and save ROCS
     for label in labels:
-        category_rs[label].print_result(label)
+        category_rs[label].print_result(label, digit)
 
 
 if __name__ == '__main__':
@@ -114,15 +133,20 @@ if __name__ == '__main__':
     parser.add_argument('--validate', default=True, type=bool, help="validate the model or not")
     parser.add_argument('--out', default="model.out", help='trained model')
     parser.add_argument('--N', default=-1, type=int, help="number of cores")
+    parser.add_argument('--classifier', default="R_forest",
+                        help="classifier ot use, also support logistic regression 'Logistic'")
     args = parser.parse_args()
 
     # load processed data
     X = np.load(args.X)
     y = np.load(args.y)
+    samples, digs = np.shape(y)
+    for i in range(digs):
+        temp_y = y[:, i]
 
-    # train the model
-    train_model(X, y, args.out, args.N)
+        # train the model
+        train_model(X, temp_y, args.out, args.N, i, args.classifier)
 
-    # validate the model
-    if (args.validate):
-        validate_model(X, y, args.N)
+        # validate the model
+        if (args.validate):
+            validate_model(X, temp_y, args.N, i, args.classifier)
