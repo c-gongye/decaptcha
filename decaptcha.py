@@ -1,6 +1,6 @@
 import argparse
-import pickle  # save model
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -40,7 +40,7 @@ class category_result:
                   % (label, digit, np.mean(self.aucs), np.std(self.aucs)))
         plt.legend(loc="lower right")
         plt.savefig('./result/digit%dnumber%d.png' % (label, digit))
-        #plt.show()
+        # plt.show()
         plt.clf()
 
 
@@ -83,7 +83,7 @@ def train_model(X, y, out, N, digit, classifier):
     # output name
     out = 'digit' + str(digit) + out
     with open(out, 'w') as f:
-        pickle.dump(clf, f)
+        joblib.dump(clf, f)
     print "Model saved in", out
 
 
