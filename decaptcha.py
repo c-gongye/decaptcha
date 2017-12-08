@@ -130,7 +130,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='train a model do a validation analysis using logistic regression')
     parser.add_argument('--X', default="X.npy", help="an ndarray of the data points")
     parser.add_argument('--y', default="y.npy", help='an ndarray of the labels')
-    parser.add_argument('--validate', default=True, type=bool, help="validate the model or not")
+    parser.add_argument('--validate', default=1, type=int, help="validate the model or not")
     parser.add_argument('--out', default="model.out", help='trained model')
     parser.add_argument('--N', default=-1, type=int, help="number of cores")
     parser.add_argument('--classifier', default="R_forest",
