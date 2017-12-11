@@ -1,17 +1,21 @@
 import argparse
+import itertools
 
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model.logistic import LogisticRegression
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, confusion_matrix
 from sklearn.model_selection import KFold
+
+CLASS_NAME = [str(x) for x in range(10)]
 
 
 class category_result:
     """
     class for calculating and storing result of each category
+    
     """
     mean_fpr = np.linspace(0, 1, 100)
 
@@ -39,7 +43,7 @@ class category_result:
         plt.title('ROCs of category %d, digit %d Mean AUC = %0.2f $\pm$ %0.2f'
                   % (label, digit, np.mean(self.aucs), np.std(self.aucs)))
         plt.legend(loc="lower right")
-        plt.savefig('./result/digit%dnumber%d.png' % (label, digit))
+        plt.savefig('./graph/digit%dnumber%d.png' % (label, digit))
         # plt.show()
         plt.clf()
 
@@ -47,26 +51,51 @@ class category_result:
 class fold_result:
     """
     class for calculating and storing result of each fold
+
     """
 
     def __init__(self):
         self.train_scores = []
         self.test_scores = []
+        self.confussion_m = np.zeros((10, 10))
 
     def append(self, clf, X_train, y_train, X_test, y_test):
         self.train_scores.append(clf.score(X_train, y_train))
         self.test_scores.append(clf.score(X_test, y_test))
+        self.confussion_m += confusion_matrix(y_test, clf.predict(X_test))
 
-    def print_score(self):
+    def print_score(self, digit):
         print("Train set accuracy: %0.3f (+/- %0.3f)"
               % (np.mean(self.train_scores), np.std(self.train_scores)))
         print("Test set accuracy: %0.3f (+/- %0.3f)"
               % (np.mean(self.test_scores), np.std(self.test_scores)))
+        # Normalize conffusion matrix
+        self.confussion_m = self.confussion_m.astype('float') / self.confussion_m.sum(axis=1)[:, np.newaxis]
+        plt.imshow(self.confussion_m, interpolation='nearest', cmap=plt.cm.Blues)
+        plt.title("Confusion matrix")
+        plt.colorbar()
+        tick_marks = np.arange(len(CLASS_NAME))
+        plt.xticks(tick_marks, CLASS_NAME, rotation=45)
+        plt.yticks(tick_marks, CLASS_NAME)
+
+        fmt = '.2f'
+        thresh = self.confussion_m.max() / 2.
+        for i, j in itertools.product(range(self.confussion_m.shape[0]), range(self.confussion_m.shape[1])):
+            plt.text(j, i, format(self.confussion_m[i, j], fmt),
+                     horizontalalignment="center",
+                     color="white" if self.confussion_m[i, j] > thresh else "black")
+
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.savefig("./graph/digit%d_cm.png" %digit)
+        plt.show()
 
 
 def train_model(X, y, out, N, digit, classifier):
     """
     This function train the model and save the pickled result
+
     :param X: nparray, one row is one sample
     :param y: nparray, labels
     :param out: output filename
@@ -91,6 +120,7 @@ def validate_model(X, y, N, digit, classifier):
     """
     This function validate the model by K-fold cross validation and print the ROC curves
     in the result folder
+
     :param X: nparray, one row is one sample
     :param y: nparray, labels
     :param out: output filename
@@ -120,7 +150,7 @@ def validate_model(X, y, N, digit, classifier):
         fold_r.append(clf, X_train, y_train, X_test, y_test)
         for label in labels:
             category_rs[label].append(y_test, probas[:, label], label)
-    fold_r.print_score()
+    fold_r.print_score(digit)
     # print and save ROCS
     for label in labels:
         category_rs[label].print_result(label, digit)
