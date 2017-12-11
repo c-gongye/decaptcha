@@ -9,7 +9,6 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.preprocessing import StandardScaler
 
-
 ####################################################################################
 #  changing parameters below is not recommended unless you know what you are doing #
 ####################################################################################
@@ -25,6 +24,7 @@ MAX_TREES = 200
 
 # for LG
 MAX_C = 50
+
 
 ####################################################################################
 
@@ -44,6 +44,7 @@ class ModelSelector():
         self.print_scores(score_mean, score_std, p, name)
         return scores.mean()
 
+
 def test_rf(X, y, N):
     model = ModelSelector(X, y, RandomForestClassifier())
     scores = []
@@ -53,7 +54,7 @@ def test_rf(X, y, N):
         num_trees = i * 10 + 10
         print "Number of trees: ", num_trees
         for j in range(NUM_SEEDS):
-            model.clf = RandomForestClassifier(n_estimators=num_trees, random_state=j,n_jobs=N)
+            model.clf = RandomForestClassifier(n_estimators=num_trees, random_state=j, n_jobs=N)
             sub_scores.append(model.model_score(j, "SEED"))
         scores.append(sub_scores)
         indexes.append(num_trees)
@@ -82,7 +83,7 @@ def test_mlp(X, y):
     model = ModelSelector(X, y, MLPClassifier())
     scores = []
     indexes = []
-    for i in range(MAX_NUS / 10):
+    for i in range(MIN_NUS / 10, MAX_NUS / 10):
         sub_scores = []
         num_neurons = i * 10 + 10
         print "Number of neurons: ", num_neurons
@@ -106,17 +107,22 @@ def test_rg(X, y, lift, N):
     scaler.fit(X)
     X = scaler.transform(X)
 
-    print "Caclculation scores..."
-    for i in range(MAX_C/10):
+    print "Calculating scores..."
+    scores = []
+    indexes = []
+    for i in range(MAX_C / 10):
         C = i * 10 + 1
         model = ModelSelector(X, y, LogisticRegression(solver="sag", n_jobs=N))
-        model.model_score(C,'C')
+        scores.append(model.model_score(C, 'C'))
+        indexes.append(C)
+    plot_scores(scores, indexes, "Accuracy", "C",
+                "Accuracy", "Accuracies of different C LG", "LG.png")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='select classifier using K-Fold cross validation')
     parser.add_argument('--N', default=-1, type=int, help="number of cpu cores")
-    parser.add_argument('--classifier', default=1, type=int, help=
+    parser.add_argument('--classifier', default=2, type=int, help=
     """
     1: Random Forest
     2: Logistic Regression
@@ -129,7 +135,7 @@ if __name__ == '__main__':
     # load processed data
     X = np.load('X.npy')
     y = np.load('y.npy')
-    y = y[:,3]
+    y = y[:, 3]
     # test the classifier
     if args.classifier == 1:
         test_rf(X, y, args.N)
