@@ -43,7 +43,7 @@ class category_result:
         plt.title('ROCs of category %d, digit %d Mean AUC = %0.2f $\pm$ %0.2f'
                   % (label, digit, np.mean(self.aucs), np.std(self.aucs)))
         plt.legend(loc="lower right")
-        plt.savefig('./graph/digit%dnumber%d.png' % (label, digit))
+        plt.savefig('./graph/digit%dnumber%d.png' % (digit, label))
         # plt.show()
         plt.clf()
 
@@ -88,7 +88,7 @@ class fold_result:
         plt.tight_layout()
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
-        plt.savefig("./graph/digit%d_cm.png" %digit)
+        plt.savefig("./graph/digit%d_cm.png" % digit)
         plt.show()
 
 
