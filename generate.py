@@ -20,6 +20,7 @@ class PreProcessor(object):
         def _(s, img):
             img = img.convert("L")
             # TODO: fallback to 40*60 for single char?
+            # split image every 27x60 px
             return s, [np.array(img.crop((i * 27, 0, i * 27 + 27, 60))).flatten() for i in
                                        range(length)]
 
@@ -32,6 +33,8 @@ class PreProcessor(object):
         def _(s, img):
             img = img.convert("L")
             r = [np.array(img.crop((i * 27, 0, i * 27 + 27, 60))) for i in range(length)]
+            # Binarization
+            # if a pixel is darker than image mean, it's set to black, otherwise set to white
             r = map(lambda im: ndimage.binary_opening((im > im.mean()).astype(np.float)).flatten(), r)
             # TODO: fallback to 40*60 for single char?
             return s, r
@@ -65,6 +68,7 @@ class PreProcessor(object):
 def generate(length, img_captcha):
     @next
     def _(seq):
+        # generate a captcha image, return each character's index and the image
         idx = [random.randrange(0, len(CLASSES)) for i in range(length)]
         s = "".join([CLASSES[i] for i in idx])
         return idx, img_captcha.generate_image(s)
@@ -75,6 +79,7 @@ def generate(length, img_captcha):
 def save_image(path):
     @next
     def _(s, img):
+        # save a image
         _str = "".join([CLASSES[i] for i in s])
         fname = os.path.join(path, "%s-%s.png" % (_str, 10000000 * random.random()))
         img.save(fname)
@@ -84,6 +89,7 @@ def save_image(path):
 
 
 def next(f):
+    # a stub decorator to define a pipeline function
     def exe(*args):
         r = __exe.next(*f(*args))
         return r
@@ -93,6 +99,13 @@ def next(f):
 
 
 def process(count, chain, L, _id=None):
+    '''
+    Processing the pipeline
+    :param count: iterations to run
+    :param chain: the pipeline function chain
+    :param L: the list to store resukt
+    :param _id: set process id
+    '''
     X = []
     y = []
     for i in range(count):
@@ -130,9 +143,10 @@ if __name__ == '__main__':
             os.makedirs(args.save)
 
     length = int(args.length)
+    # the ImageCaptcha instance
     img_captcha = ImageCaptcha(width=27 * length, height=60, font_sizes=(45,))
 
-    # setup call chains
+    # setup call chains, join all functions to a pipeline
     chain = []
     chain.append(generate(length, img_captcha))
     if args.save:
@@ -143,11 +157,12 @@ if __name__ == '__main__':
     for i in range(len(chain) - 1):
         chain[i].next = chain[i + 1]
 
-    # start process
+    # start processing
     process_cnt = int(args.N)
     sample_cnt = int(args.CNT)
     s = time.time()
     manager = Manager()
+    # shared list instance
     L = manager.list()
     childs = []
     for i in range(process_cnt):
@@ -162,6 +177,8 @@ if __name__ == '__main__':
     for i in range(process_cnt):
         childs[i].join()
     print("generated %d samples in %.2fs" % (sample_cnt, time.time() - s))
+    
+    # it's time to save the generated samples
     s = time.time()
     X = []
     y = []
