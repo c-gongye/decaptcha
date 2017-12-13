@@ -8,8 +8,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model.logistic import LogisticRegression
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 from sklearn.model_selection import KFold
-
-CLASS_NAME = [str(x) for x in range(10)]
+from generate import CLASSES
+#CLASS_NAME = [str(x) for x in range(10)]
 
 
 class category_result:
@@ -40,10 +40,10 @@ class category_result:
         plt.ylim([-0.05, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('ROCs of category %d, digit %d Mean AUC = %0.2f $\pm$ %0.2f'
-                  % (label, digit, np.mean(self.aucs), np.std(self.aucs)))
+        plt.title('ROCs of category %s, digit %d Mean AUC = %0.2f $\pm$ %0.2f'
+                  % (CLASSES[label], digit, np.mean(self.aucs), np.std(self.aucs)))
         plt.legend(loc="lower right")
-        plt.savefig('./graph/digit%dnumber%d.png' % (digit, label))
+        plt.savefig('./graph/digit%dnumber%s.png' % (digit, CLASSES[label]))
         # plt.show()
         plt.clf()
 
@@ -57,7 +57,7 @@ class fold_result:
     def __init__(self):
         self.train_scores = []
         self.test_scores = []
-        self.confussion_m = np.zeros((10, 10))
+        self.confussion_m = np.zeros((36, 36))
 
     def append(self, clf, X_train, y_train, X_test, y_test):
         self.train_scores.append(clf.score(X_train, y_train))
@@ -70,13 +70,14 @@ class fold_result:
         print("Test set accuracy: %0.3f (+/- %0.3f)"
               % (np.mean(self.test_scores), np.std(self.test_scores)))
         # Normalize conffusion matrix
+        plt.figure(figsize=(15,15))
         self.confussion_m = self.confussion_m.astype('float') / self.confussion_m.sum(axis=1)[:, np.newaxis]
         plt.imshow(self.confussion_m, interpolation='nearest', cmap=plt.cm.Blues)
         plt.title("Confusion matrix")
         plt.colorbar()
-        tick_marks = np.arange(len(CLASS_NAME))
-        plt.xticks(tick_marks, CLASS_NAME, rotation=45)
-        plt.yticks(tick_marks, CLASS_NAME)
+        tick_marks = np.arange(len(CLASSES))
+        plt.xticks(tick_marks, CLASSES, rotation=45)
+        plt.yticks(tick_marks, CLASSES)
 
         fmt = '.2f'
         thresh = self.confussion_m.max() / 2.
