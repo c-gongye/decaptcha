@@ -21,7 +21,7 @@ if __name__ == '__main__':
             shutil.rmtree(TMPDIR)
         os.system("python ./generate.py 1 -l 4 -p binary_only -s %s >/dev/null" % TMPDIR)
         img = os.listdir(TMPDIR)[0]
-        if os.system("./imgcat %s 2>/dev/null" % os.path.join(TMPDIR, img)) > 0:
+        if os.system("imgcat %s 2>/dev/null" % os.path.join(TMPDIR, img)) > 0:
             print("generated captcha saved at %s" % os.path.join(TMPDIR, img))
             import matplotlib.pyplot as plt
             f = misc.imread(os.path.join(TMPDIR, img))
