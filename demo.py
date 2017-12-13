@@ -5,6 +5,7 @@ import shutil
 import joblib
 import numpy as np
 from scipy import misc
+from generate import CLASSES
 
 TMPDIR = '.tmp-demo'
 
@@ -31,6 +32,6 @@ if __name__ == '__main__':
 
         X = np.load('X.npy')
         for i in range(4):
-            prediction += str(clf[i].predict(X)[0])
+            prediction += CLASSES[clf[i].predict(X)[0]]
 
         print("Prediction result is: %s" % prediction)

@@ -5,10 +5,12 @@ import random
 import sys
 import time
 from multiprocessing import Manager, Process
-
+import string
 import numpy as np
 from captcha.image import ImageCaptcha
 
+
+CLASSES = string.digits + string.lowercase
 
 class PreProcessor(object):
 
@@ -18,7 +20,7 @@ class PreProcessor(object):
         def _(s, img):
             img = img.convert("L")
             # TODO: fallback to 40*60 for single char?
-            return map(int, list(s)), [np.array(img.crop((i * 27, 0, i * 27 + 27, 60))).flatten() for i in
+            return s, [np.array(img.crop((i * 27, 0, i * 27 + 27, 60))).flatten() for i in
                                        range(length)]
 
         return _
@@ -32,7 +34,7 @@ class PreProcessor(object):
             r = [np.array(img.crop((i * 27, 0, i * 27 + 27, 60))) for i in range(length)]
             r = map(lambda im: ndimage.binary_opening((im > im.mean()).astype(np.float)).flatten(), r)
             # TODO: fallback to 40*60 for single char?
-            return map(int, list(s)), r
+            return s, r
 
         return _
 
@@ -43,7 +45,7 @@ class PreProcessor(object):
         def _(s, img):
             im = np.array(img.convert("L"))
             r = ndimage.binary_opening((im > im.mean()).astype(np.float)).flatten()
-            return [map(int, list(s))], [r]
+            return [s], [r]
 
         return _
 
@@ -55,7 +57,7 @@ class PreProcessor(object):
         def _(s, img):
             im = imresize(np.array(img.convert("L")), size)
             r = ndimage.binary_opening((im > im.mean()).astype(np.float)).flatten()
-            return [map(int, list(s))], [r]
+            return [s], [r]
 
         return _
 
@@ -63,8 +65,9 @@ class PreProcessor(object):
 def generate(length, img_captcha):
     @next
     def _(seq):
-        s = ("%%0%dd" % length) % (random.random() * (10 ** length))
-        return s, img_captcha.generate_image(s)
+        idx = [random.randrange(0, len(CLASSES)) for i in range(length)]
+        s = "".join([CLASSES[i] for i in idx])
+        return idx, img_captcha.generate_image(s)
 
     return _
 
@@ -72,7 +75,8 @@ def generate(length, img_captcha):
 def save_image(path):
     @next
     def _(s, img):
-        fname = os.path.join(path, "%s-%s.png" % (s, 10000000 * random.random()))
+        _str = "".join([CLASSES[i] for i in s])
+        fname = os.path.join(path, "%s-%s.png" % (_str, 10000000 * random.random()))
         img.save(fname)
         return s, img
 
